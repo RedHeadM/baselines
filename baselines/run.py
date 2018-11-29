@@ -4,11 +4,10 @@ import sys
 from collections import defaultdict
 from importlib import import_module
 
-import gym
 import numpy as np
 import tensorflow as tf
-from gym.envs.registration import register
 
+import gym
 from baselines import logger
 from baselines.common.cmd_util import (common_arg_parser, make_env,
                                        make_vec_env, parse_unknown_args)
@@ -17,6 +16,7 @@ from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.vec_env.vec_normalize import VecNormalize
 from baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
 from bulletrobotgym.env_tcn import TcnPush as PushingEnv
+from gym.envs.registration import register
 
 register(
     id='tcn-push-v0',
@@ -197,11 +197,11 @@ def parse_cmdline_kwargs(args):
     return {k: parse(v) for k, v in parse_unknown_args(args).items()}
 
 
-def main():
+def main(args):
     # configure logger, disable logging in child MPI processes (with rank > 0)
 
     arg_parser = common_arg_parser()
-    args, unknown_args = arg_parser.parse_known_args()
+    args, unknown_args = arg_parser.parse_known_args(args)
     extra_args = parse_cmdline_kwargs(unknown_args)
 
     if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
@@ -237,6 +237,8 @@ def main():
 
         env.close()
 
+    return model
+
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv)
