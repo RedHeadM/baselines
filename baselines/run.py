@@ -118,7 +118,6 @@ def build_env(args):
             env = VecFrameStack(env, frame_stack_size)
 
     else:
-        assert False
         config = tf.ConfigProto(allow_soft_placement=True,
                                 intra_op_parallelism_threads=1,
                                 inter_op_parallelism_threads=1)
