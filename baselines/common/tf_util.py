@@ -66,6 +66,7 @@ def make_session(config=None, num_cpu=None, make_default=False, graph=None):
             inter_op_parallelism_threads=num_cpu,
             intra_op_parallelism_threads=num_cpu)
         config.gpu_options.allow_growth = True
+        config.gpu_options.per_process_gpu_memory_fraction = 0.5 # maximun alloc gpu50% of MEM
 
     if make_default:
         return tf.InteractiveSession(config=config, graph=graph)
