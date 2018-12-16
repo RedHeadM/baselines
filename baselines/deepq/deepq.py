@@ -1,23 +1,20 @@
 import os
 import tempfile
-
-import tensorflow as tf
 import zipfile
-import cloudpickle
+
 import numpy as np
+import tensorflow as tf
 
 import baselines.common.tf_util as U
-from baselines.common.tf_util import load_variables, save_variables
-from baselines import logger
-from baselines.common.schedules import LinearSchedule
+import cloudpickle
+from baselines import deepq, logger
 from baselines.common import set_global_seeds
-
-from baselines import deepq
-from baselines.deepq.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
-from baselines.deepq.utils import ObservationInput
-
-from baselines.common.tf_util import get_session
+from baselines.common.schedules import LinearSchedule
+from baselines.common.tf_util import (get_session, load_variables,
+                                      save_variables)
 from baselines.deepq.models import build_q_func
+from baselines.deepq.replay_buffer import PrioritizedReplayBuffer, ReplayBuffer
+from baselines.deepq.utils import ObservationInput
 
 
 class ActWrapper(object):
@@ -117,7 +114,7 @@ def learn(env,
           callback=None,
           load_path=None,
           **network_kwargs
-            ):
+          ):
     """Train a deepq model.
 
     Parameters
@@ -196,6 +193,7 @@ def learn(env,
     # by cloudpickle when serializing make_obs_ph
 
     observation_space = env.observation_space
+
     def make_obs_ph(name):
         return ObservationInput(observation_space, name=name)
 
@@ -256,7 +254,6 @@ def learn(env,
             load_variables(load_path)
             logger.log('Loaded model from {}'.format(load_path))
 
-
         for t in range(total_timesteps):
             if callback is not None:
                 if callback(locals(), globals()):
@@ -272,7 +269,9 @@ def learn(env,
                 # policy is comparable to eps-greedy exploration with eps = exploration.value(t).
                 # See Appendix C.1 in Parameter Space Noise for Exploration, Plappert et al., 2017
                 # for detailed explanation.
-                update_param_noise_threshold = -np.log(1. - exploration.value(t) + exploration.value(t) / float(env.action_space.n))
+                update_param_noise_threshold = - \
+                    np.log(1. - exploration.value(t) +
+                           exploration.value(t) / float(env.action_space.n))
                 kwargs['reset'] = reset
                 kwargs['update_param_noise_threshold'] = update_param_noise_threshold
                 kwargs['update_param_noise_scale'] = True
@@ -315,7 +314,8 @@ def learn(env,
                 logger.record_tabular("mean 100 episode reward", mean_100ep_reward)
                 logger.record_tabular("% time spent exploring", int(100 * exploration.value(t)))
                 logger.dump_tabular()
-
+            if t == learning_starts:
+                print("start learning!")
             if (checkpoint_freq is not None and t > learning_starts and
                     num_episodes > 100 and t % checkpoint_freq == 0):
                 if saved_mean_reward is None or mean_100ep_reward > saved_mean_reward:

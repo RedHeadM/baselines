@@ -1,21 +1,22 @@
+import functools
 import os.path as osp
 import time
-import functools
+
 import tensorflow as tf
+
 from baselines import logger
-
-from baselines.common import set_global_seeds, explained_variance
-from baselines.common.policies import build_policy
-from baselines.common.tf_util import get_session, save_variables, load_variables
-
 from baselines.a2c.runner import Runner
 from baselines.a2c.utils import Scheduler, find_trainable_variables
 from baselines.acktr import kfac
+from baselines.common import explained_variance, set_global_seeds
+from baselines.common.policies import build_policy
+from baselines.common.tf_util import (get_session, load_variables,
+                                      save_variables)
 
 
 class Model(object):
 
-    def __init__(self, policy, ob_space, ac_space, nenvs,total_timesteps, nprocs=32, nsteps=20,
+    def __init__(self, policy, ob_space, ac_space, nenvs, total_timesteps, nprocs=32, nsteps=20,
                  ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5,
                  kfac_clip=0.001, lrschedule='linear', is_async=True):
 
@@ -34,32 +35,32 @@ class Model(object):
         neglogpac = train_model.pd.neglogp(A)
         self.logits = train_model.pi
 
-        ##training loss
+        # training loss
         pg_loss = tf.reduce_mean(ADV*neglogpac)
         entropy = tf.reduce_mean(train_model.pd.entropy())
         pg_loss = pg_loss - ent_coef * entropy
         vf_loss = tf.losses.mean_squared_error(tf.squeeze(train_model.vf), R)
         train_loss = pg_loss + vf_coef * vf_loss
 
-
-        ##Fisher loss construction
+        # Fisher loss construction
         self.pg_fisher = pg_fisher_loss = -tf.reduce_mean(neglogpac)
         sample_net = train_model.vf + tf.random_normal(tf.shape(train_model.vf))
-        self.vf_fisher = vf_fisher_loss = - vf_fisher_coef*tf.reduce_mean(tf.pow(train_model.vf - tf.stop_gradient(sample_net), 2))
+        self.vf_fisher = vf_fisher_loss = - vf_fisher_coef * \
+            tf.reduce_mean(tf.pow(train_model.vf - tf.stop_gradient(sample_net), 2))
         self.joint_fisher = joint_fisher_loss = pg_fisher_loss + vf_fisher_loss
 
-        self.params=params = find_trainable_variables("acktr_model")
+        self.params = params = find_trainable_variables("acktr_model")
 
-        self.grads_check = grads = tf.gradients(train_loss,params)
+        self.grads_check = grads = tf.gradients(train_loss, params)
 
         with tf.device('/gpu:0'):
-            self.optim = optim = kfac.KfacOptimizer(learning_rate=PG_LR, clip_kl=kfac_clip,\
-                momentum=0.9, kfac_update=1, epsilon=0.01,\
-                stats_decay=0.99, is_async=is_async, cold_iter=10, max_grad_norm=max_grad_norm)
+            self.optim = optim = kfac.KfacOptimizer(learning_rate=PG_LR, clip_kl=kfac_clip,
+                                                    momentum=0.9, kfac_update=1, epsilon=0.01,
+                                                    stats_decay=0.99, is_async=is_async, cold_iter=10, max_grad_norm=max_grad_norm)
 
             # update_stats_op = optim.compute_and_apply_stats(joint_fisher_loss, var_list=params)
             optim.compute_and_apply_stats(joint_fisher_loss, var_list=params)
-            train_op, q_runner = optim.apply_gradients(list(zip(grads,params)))
+            train_op, q_runner = optim.apply_gradients(list(zip(grads, params)))
         self.q_runner = q_runner
         self.lr = Scheduler(v=lr, nvalues=total_timesteps, schedule=lrschedule)
 
@@ -68,7 +69,8 @@ class Model(object):
             for step in range(len(obs)):
                 cur_lr = self.lr.value()
 
-            td_map = {train_model.X:obs, A:actions, ADV:advs, R:rewards, PG_LR:cur_lr, VF_LR:cur_lr}
+            td_map = {train_model.X: obs, A: actions, ADV: advs,
+                      R: rewards, PG_LR: cur_lr, VF_LR: cur_lr}
             if states is not None:
                 td_map[train_model.S] = states
                 td_map[train_model.M] = masks
@@ -78,7 +80,6 @@ class Model(object):
                 td_map
             )
             return policy_loss, value_loss, policy_entropy
-
 
         self.train = train
         self.save = functools.partial(save_variables, sess=sess)
@@ -90,11 +91,11 @@ class Model(object):
         self.initial_state = step_model.initial_state
         tf.global_variables_initializer().run(session=sess)
 
-def learn(network, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interval=1, nprocs=32, nsteps=20,
-                 ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5,
-                 kfac_clip=0.001, save_interval=None, lrschedule='linear', load_path=None, is_async=True, **network_kwargs):
-    set_global_seeds(seed)
 
+def learn(network, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interval=1, nprocs=32, nsteps=20,
+          ent_coef=0.01, vf_coef=0.5, vf_fisher_coef=1.0, lr=0.25, max_grad_norm=0.5,
+          kfac_clip=0.001, save_interval=None, lrschedule='linear', load_path=None, is_async=True, **network_kwargs):
+    set_global_seeds(seed)
 
     if network == 'cnn':
         network_kwargs['one_dim_bias'] = True
@@ -104,14 +105,14 @@ def learn(network, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interva
     nenvs = env.num_envs
     ob_space = env.observation_space
     ac_space = env.action_space
-    make_model = lambda : Model(policy, ob_space, ac_space, nenvs, total_timesteps, nprocs=nprocs, nsteps
-                                =nsteps, ent_coef=ent_coef, vf_coef=vf_coef, vf_fisher_coef=
-                                vf_fisher_coef, lr=lr, max_grad_norm=max_grad_norm, kfac_clip=kfac_clip,
-                                lrschedule=lrschedule, is_async=is_async)
-    if save_interval and logger.get_dir():
-        import cloudpickle
-        with open(osp.join(logger.get_dir(), 'make_model.pkl'), 'wb') as fh:
-            fh.write(cloudpickle.dumps(make_model))
+
+    def make_model(): return Model(policy, ob_space, ac_space, nenvs, total_timesteps, nprocs=nprocs, nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef, vf_fisher_coef=vf_fisher_coef, lr=lr, max_grad_norm=max_grad_norm, kfac_clip=kfac_clip,
+                                   lrschedule=lrschedule, is_async=is_async)
+    # cashes
+    # if save_interval and logger.get_dir():
+    #     import cloudpickle
+    #     with open(osp.join(logger.get_dir(), 'make_model.pkl'), 'wb') as fh:
+    #         fh.write(cloudpickle.dumps(make_model))
     model = make_model()
 
     if load_path is not None:
@@ -128,7 +129,8 @@ def learn(network, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interva
 
     for update in range(1, total_timesteps//nbatch+1):
         obs, states, rewards, masks, actions, values = runner.run()
-        policy_loss, value_loss, policy_entropy = model.train(obs, states, rewards, masks, actions, values)
+        policy_loss, value_loss, policy_entropy = model.train(
+            obs, states, rewards, masks, actions, values)
         model.old_obs = obs
         nseconds = time.time()-tstart
         fps = int((update*nbatch)/nseconds)
@@ -142,9 +144,11 @@ def learn(network, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interva
             logger.record_tabular("value_loss", float(value_loss))
             logger.record_tabular("explained_variance", float(ev))
             logger.dump_tabular()
-
+        print("save_interval", save_interval)
+        print("log_interval", log_interval)
+        print("save_interval", logger.get_dir())
         if save_interval and (update % save_interval == 0 or update == 1) and logger.get_dir():
-            savepath = osp.join(logger.get_dir(), 'checkpoint%.5i'%update)
+            savepath = osp.join(logger.get_dir(), 'checkpoint%.5i' % update)
             print('Saving to', savepath)
             model.save(savepath)
     coord.request_stop()
