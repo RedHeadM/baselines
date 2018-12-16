@@ -4,6 +4,7 @@ import sys
 from collections import defaultdict
 from importlib import import_module
 
+import torch # fix for TLS error https://github.com/pytorch/pytorch/issues/2083
 import numpy as np
 import tensorflow as tf
 
