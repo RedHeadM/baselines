@@ -22,6 +22,8 @@ class Model(object):
 
         self.sess = sess = get_session()
         nbatch = nenvs * nsteps
+        print("nenvs", nenvs)
+
         with tf.variable_scope('acktr_model', reuse=tf.AUTO_REUSE):
             self.model = step_model = policy(nenvs, 1, sess=sess)
             self.model2 = train_model = policy(nenvs*nsteps, nsteps, sess=sess)
@@ -144,9 +146,6 @@ def learn(network, env, seed, total_timesteps=int(40e6), gamma=0.99, log_interva
             logger.record_tabular("value_loss", float(value_loss))
             logger.record_tabular("explained_variance", float(ev))
             logger.dump_tabular()
-        print("save_interval", save_interval)
-        print("log_interval", log_interval)
-        print("save_interval", logger.get_dir())
         if save_interval and (update % save_interval == 0 or update == 1) and logger.get_dir():
             savepath = osp.join(logger.get_dir(), 'checkpoint%.5i' % update)
             print('Saving to', savepath)

@@ -1,18 +1,15 @@
-import time
 import functools
+import time
+
 import tensorflow as tf
+from tensorflow import losses
 
 from baselines import logger
-
-from baselines.common import set_global_seeds, explained_variance
-from baselines.common import tf_util
+from baselines.a2c.runner import Runner
+from baselines.a2c.utils import Scheduler, find_trainable_variables
+from baselines.common import explained_variance, set_global_seeds, tf_util
 from baselines.common.policies import build_policy
 
-
-from baselines.a2c.utils import Scheduler, find_trainable_variables
-from baselines.a2c.runner import Runner
-
-from tensorflow import losses
 
 class Model(object):
 
@@ -28,14 +25,14 @@ class Model(object):
         save/load():
         - Save load the model
     """
+
     def __init__(self, policy, env, nsteps,
-            ent_coef=0.01, vf_coef=0.5, max_grad_norm=0.5, lr=7e-4,
-            alpha=0.99, epsilon=1e-5, total_timesteps=int(80e6), lrschedule='linear'):
+                 ent_coef=0.01, vf_coef=0.5, max_grad_norm=0.5, lr=7e-4,
+                 alpha=0.99, epsilon=1e-5, total_timesteps=int(80e6), lrschedule='linear'):
 
         sess = tf_util.get_session()
         nenvs = env.num_envs
         nbatch = nenvs*nsteps
-
 
         with tf.variable_scope('a2c_model', reuse=tf.AUTO_REUSE):
             # step_model is used for sampling
@@ -92,7 +89,7 @@ class Model(object):
             for step in range(len(obs)):
                 cur_lr = lr.value()
 
-            td_map = {train_model.X:obs, A:actions, ADV:advs, R:rewards, LR:cur_lr}
+            td_map = {train_model.X: obs, A: actions, ADV: advs, R: rewards, LR: cur_lr}
             if states is not None:
                 td_map[train_model.S] = states
                 td_map[train_model.M] = masks
@@ -101,7 +98,6 @@ class Model(object):
                 td_map
             )
             return policy_loss, value_loss, policy_entropy
-
 
         self.train = train
         self.train_model = train_model
@@ -115,23 +111,22 @@ class Model(object):
 
 
 def learn(
-    network,
-    env,
-    seed=None,
-    nsteps=5,
-    total_timesteps=int(80e6),
-    vf_coef=0.5,
-    ent_coef=0.01,
-    max_grad_norm=0.5,
-    lr=7e-4,
-    lrschedule='linear',
-    epsilon=1e-5,
-    alpha=0.99,
-    gamma=0.99,
-    log_interval=100,
-    load_path=None,
-    **network_kwargs):
-
+        network,
+        env,
+        seed=None,
+        nsteps=5,
+        total_timesteps=int(80e6),
+        vf_coef=0.5,
+        ent_coef=0.01,
+        max_grad_norm=0.5,
+        lr=7e-4,
+        lrschedule='linear',
+        epsilon=1e-5,
+        alpha=0.99,
+        gamma=0.99,
+        log_interval=100,
+        load_path=None,
+        **network_kwargs):
     '''
     Main entrypoint for A2C algorithm. Train a policy with given network architecture on a given environment using a2c algorithm.
 
@@ -179,8 +174,6 @@ def learn(
 
     '''
 
-
-
     set_global_seeds(seed)
 
     # Get the nb of env
@@ -189,7 +182,7 @@ def learn(
 
     # Instantiate the model object (that creates step_model and train_model)
     model = Model(policy=policy, env=env, nsteps=nsteps, ent_coef=ent_coef, vf_coef=vf_coef,
-        max_grad_norm=max_grad_norm, lr=lr, alpha=alpha, epsilon=epsilon, total_timesteps=total_timesteps, lrschedule=lrschedule)
+                  max_grad_norm=max_grad_norm, lr=lr, alpha=alpha, epsilon=epsilon, total_timesteps=total_timesteps, lrschedule=lrschedule)
     if load_path is not None:
         model.load(load_path)
 
@@ -206,7 +199,8 @@ def learn(
         # Get mini batch of experiences
         obs, states, rewards, masks, actions, values = runner.run()
 
-        policy_loss, value_loss, policy_entropy = model.train(obs, states, rewards, masks, actions, values)
+        policy_loss, value_loss, policy_entropy = model.train(
+            obs, states, rewards, masks, actions, values)
         nseconds = time.time()-tstart
 
         # Calculate the fps (frame per second)
@@ -223,4 +217,3 @@ def learn(
             logger.record_tabular("explained_variance", float(ev))
             logger.dump_tabular()
     return model
-
