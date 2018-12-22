@@ -16,8 +16,8 @@ from baselines.common.tf_util import get_session
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.vec_env.vec_normalize import VecNormalize
 from baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
-from bulletrobotgym.env_tcn import TcnPush as PushingEnv
-from bulletrobotgym.env_tcn import TcnPushSubStats
+from bulletrobotgym.env_tcn import (TcnPush, TcnPushSparceWindow,
+                                    TcnPushSubStats)
 from gym.envs.registration import register
 
 register(
@@ -27,6 +27,10 @@ register(
 register(
     id='tcn-push-sub-states-v0',
     entry_point='bulletrobotgym.env_tcn:TcnPushSubStats',
+)
+register(
+    id='tcn-push-sparce-win-v0',
+    entry_point='bulletrobotgym.env_tcn:TcnPushSparceWindow',
 )
 
 
@@ -51,7 +55,7 @@ for env in gym.envs.registry.all():
     env_type = env._entry_point.split(':')[0].split('.')[-1]
     _game_envs[env_type].add(env.id)
 
-_game_envs["tcn"] = {'tcn-push-v0'}
+_game_envs["tcn"] = {'tcn-push-v0', 'tcn-push-sparce-win-v0', 'tcn-push-sub-states-v0'}
 
 # reading benchmark names directly from retro requires
 # importing retro here, and for some reason that crashes tensorflow
@@ -112,6 +116,7 @@ def build_env(args):
 
     env_type, env_id = get_env_type(args.env)
     print("env_type", env_type)
+    print("args.num_env: ", args.num_env)
     if env_type in {'atari', 'retro', "env_tcn", "tcn"}:
         if alg == 'deepq':
             env = make_env(env_id, env_type, seed=seed, wrapper_kwargs={'frame_stack': True})
