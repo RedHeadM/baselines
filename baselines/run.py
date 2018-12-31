@@ -24,18 +24,18 @@ register(
     id='tcn-push-v0',
     entry_point='bulletrobotgym.env_tcn:TcnPush',
 )
-register(
-    id='tcn-push-sub-states-v0',
-    entry_point='bulletrobotgym.env_tcn:TcnPushSubStats',
-)
-register(
-    id='tcn-push-sparce-win-v0',
-    entry_point='bulletrobotgym.env_tcn:TcnPushSparceWindow',
-)
-register(
-    id='tcn-push-rnn-v0',
-    entry_point='bulletrobotgym.env_tcn:TcnRnnPush',
-)
+# register(
+#     id='tcn-push-sub-states-v0',
+#     entry_point='bulletrobotgym.env_tcn:TcnPushSubStats',
+# )
+# register(
+#     id='tcn-push-sparce-win-v0',
+#     entry_point='bulletrobotgym.env_tcn:TcnPushSparceWindow',
+# )
+# register(
+#     id='tcn-push-rnn-v0',
+#     entry_point='bulletrobotgym.env_tcn:TcnRnnPush',
+# )
 
 try:
     from mpi4py import MPI
