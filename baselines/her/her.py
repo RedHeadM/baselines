@@ -1,15 +1,16 @@
+import json
 import os
 
-import click
 import numpy as np
-import json
-from mpi4py import MPI
 
+import baselines.her.experiment.config as config
+import click
 from baselines import logger
 from baselines.common import set_global_seeds, tf_util
 from baselines.common.mpi_moments import mpi_moments
-import baselines.her.experiment.config as config
 from baselines.her.rollout import RolloutWorker
+from mpi4py import MPI
+
 
 def mpi_average(value):
     if not isinstance(value, list):
@@ -32,7 +33,8 @@ def train(*, policy, rollout_worker, evaluator,
     logger.info("Training...")
     best_success_rate = -1
 
-    if policy.bc_loss == 1: policy.init_demo_buffer(demo_file) #initialize demo buffer if training with demonstrations
+    if policy.bc_loss == 1:
+        policy.init_demo_buffer(demo_file)  # initialize demo buffer if training with demonstrations
 
     # num_timesteps = n_epochs * n_cycles * rollout_length * number of rollout workers
     for epoch in range(n_epochs):
@@ -46,7 +48,13 @@ def train(*, policy, rollout_worker, evaluator,
             policy.update_target_net()
 
         # test
+        os.environ['TCN_ENV_VID_LOG_FOLDER'] = 'val_vid'
+        os.environ['TCN_ENV_VID_LOG_INTERVAL'] = '1'
+
         evaluator.clear_history()
+        os.environ['TCN_ENV_VID_LOG_INTERVAL'] = '250'
+        os.environ['TCN_ENV_VID_LOG_FOLDER'] = 'train_vid'
+
         for _ in range(n_test_rollouts):
             evaluator.generate_rollouts()
 
@@ -66,7 +74,8 @@ def train(*, policy, rollout_worker, evaluator,
         success_rate = mpi_average(evaluator.current_success_rate())
         if rank == 0 and success_rate >= best_success_rate and save_path:
             best_success_rate = success_rate
-            logger.info('New best success rate: {}. Saving policy to {} ...'.format(best_success_rate, best_policy_path))
+            logger.info('New best success rate: {}. Saving policy to {} ...'.format(
+                best_success_rate, best_policy_path))
             evaluator.save_policy(best_policy_path)
             evaluator.save_policy(latest_policy_path)
         if rank == 0 and policy_save_interval > 0 and epoch % policy_save_interval == 0 and save_path:
@@ -85,17 +94,17 @@ def train(*, policy, rollout_worker, evaluator,
 
 
 def learn(*, network, env, total_timesteps,
-    seed=None,
-    eval_env=None,
-    replay_strategy='future',
-    policy_save_interval=5,
-    clip_return=True,
-    demo_file=None,
-    override_params=None,
-    load_path=None,
-    save_path=None,
-    **kwargs
-):
+          seed=None,
+          eval_env=None,
+          replay_strategy='future',
+          policy_save_interval=5,
+          clip_return=True,
+          demo_file=None,
+          override_params=None,
+          load_path=None,
+          save_path=None,
+          **kwargs
+          ):
 
     override_params = override_params or {}
     if MPI is not None:
@@ -115,7 +124,7 @@ def learn(*, network, env, total_timesteps,
         params.update(config.DEFAULT_ENV_PARAMS[env_name])  # merge env-specific parameters in
     params.update(**override_params)  # makes it possible to override any parameter
     with open(os.path.join(logger.get_dir(), 'params.json'), 'w') as f:
-         json.dump(params, f)
+        json.dump(params, f)
     params = config.prepare_params(params)
     params['rollout_batch_size'] = env.num_envs
 
@@ -184,7 +193,7 @@ def learn(*, network, env, total_timesteps,
 @click.option('--policy_save_interval', type=int, default=5, help='the interval with which policy pickles are saved. If set to 0, only the best and latest policy will be pickled.')
 @click.option('--replay_strategy', type=click.Choice(['future', 'none']), default='future', help='the HER replay strategy to be used. "future" uses HER, "none" disables HER.')
 @click.option('--clip_return', type=int, default=1, help='whether or not returns should be clipped')
-@click.option('--demo_file', type=str, default = 'PATH/TO/DEMO/DATA/FILE.npz', help='demo data file path')
+@click.option('--demo_file', type=str, default='PATH/TO/DEMO/DATA/FILE.npz', help='demo data file path')
 def main(**kwargs):
     learn(**kwargs)
 

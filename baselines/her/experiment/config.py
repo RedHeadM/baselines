@@ -1,11 +1,12 @@
 import os
-import numpy as np
-import gym
 
+import numpy as np
+
+import gym
 from baselines import logger
+from baselines.bench.monitor import Monitor
 from baselines.her.ddpg import DDPG
 from baselines.her.her_sampler import make_sample_her_transitions
-from baselines.bench.monitor import Monitor
 
 DEFAULT_ENV_PARAMS = {
     'FetchReach-v1': {
@@ -30,10 +31,11 @@ DEFAULT_PARAMS = {
     'scope': 'ddpg',  # can be tweaked for testing
     'relative_goals': False,
     # training
-    'n_cycles': 50,  # per epoch
+    'n_cycles': 10,  # per epoch # CHANGED
     'rollout_batch_size': 2,  # per mpi thread
     'n_batches': 40,  # training batches per cycle
-    'batch_size': 256,  # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
+    # per mpi thread, measured in transitions and reduced to even multiple of chunk_length.
+    'batch_size': 256,
     'n_test_rollouts': 10,  # number of test rollouts per epoch, each consists of rollout_batch_size rollouts
     'test_with_polyak': False,  # run test episodes with the target network
     # exploration
@@ -46,12 +48,13 @@ DEFAULT_PARAMS = {
     'norm_eps': 0.01,  # epsilon used for observation normalization
     'norm_clip': 5,  # normalized observations are cropped to this values
 
-    'bc_loss': 0, # whether or not to use the behavior cloning loss as an auxilliary loss
-    'q_filter': 0, # whether or not a Q value filter should be used on the Actor outputs
-    'num_demo': 100, # number of expert demo episodes
-    'demo_batch_size': 128, #number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
-    'prm_loss_weight': 0.001, #Weight corresponding to the primary loss
-    'aux_loss_weight':  0.0078, #Weight corresponding to the auxilliary loss also called the cloning loss
+    'bc_loss': 0,  # whether or not to use the behavior cloning loss as an auxilliary loss
+    'q_filter': 0,  # whether or not a Q value filter should be used on the Actor outputs
+    'num_demo': 100,  # number of expert demo episodes
+    # number of samples to be used from the demonstrations buffer, per mpi thread 128/1024 or 32/256
+    'demo_batch_size': 128,
+    'prm_loss_weight': 0.001,  # Weight corresponding to the primary loss
+    'aux_loss_weight':  0.0078,  # Weight corresponding to the auxilliary loss also called the cloning loss
 }
 
 
@@ -84,12 +87,13 @@ def prepare_params(kwargs):
             except ImportError:
                 MPI = None
                 mpi_rank = 0
-                logger.warn('Running with a single MPI process. This should work, but the results may differ from the ones publshed in Plappert et al.')
+                logger.warn(
+                    'Running with a single MPI process. This should work, but the results may differ from the ones publshed in Plappert et al.')
 
             max_episode_steps = env._max_episode_steps
-            env =  Monitor(env,
-                           os.path.join(logger.get_dir(), str(mpi_rank) + '.' + str(subrank)),
-                           allow_early_resets=True)
+            env = Monitor(env,
+                          os.path.join(logger.get_dir(), str(mpi_rank) + '.' + str(subrank)),
+                          allow_early_resets=True)
             # hack to re-expose _max_episode_steps (ideally should replace reliance on it downstream)
             env = gym.wrappers.TimeLimit(env, max_episode_steps=max_episode_steps)
         return env
@@ -99,7 +103,8 @@ def prepare_params(kwargs):
     assert hasattr(tmp_env, '_max_episode_steps')
     kwargs['T'] = tmp_env._max_episode_steps
 
-    kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(kwargs['max_u'], list) else kwargs['max_u']
+    kwargs['max_u'] = np.array(kwargs['max_u']) if isinstance(
+        kwargs['max_u'], list) else kwargs['max_u']
     kwargs['gamma'] = 1. - 1. / kwargs['T']
     if 'lr' in kwargs:
         kwargs['pi_lr'] = kwargs['lr']
@@ -164,7 +169,8 @@ def configure_ddpg(dims, params, reuse=False, use_mpi=True, clip_return=True):
     ddpg_params.update({'input_dims': input_dims,  # agent takes an input observations
                         'T': params['T'],
                         'clip_pos_returns': True,  # clip positive returns
-                        'clip_return': (1. / (1. - gamma)) if clip_return else np.inf,  # max abs of return
+                        # max abs of return
+                        'clip_return': (1. / (1. - gamma)) if clip_return else np.inf,
                         'rollout_batch_size': rollout_batch_size,
                         'subtract_goals': simple_goal_subtract,
                         'sample_transitions': sample_her_transitions,
