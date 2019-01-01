@@ -52,12 +52,11 @@ def train(*, policy, rollout_worker, evaluator,
         os.environ['TCN_ENV_VID_LOG_INTERVAL'] = '1'
 
         evaluator.clear_history()
-        os.environ['TCN_ENV_VID_LOG_INTERVAL'] = '250'
-        os.environ['TCN_ENV_VID_LOG_FOLDER'] = 'train_vid'
 
         for _ in range(n_test_rollouts):
             evaluator.generate_rollouts()
-
+        os.environ['TCN_ENV_VID_LOG_INTERVAL'] = '250'
+        os.environ['TCN_ENV_VID_LOG_FOLDER'] = 'train_vid'
         # record logs
         logger.record_tabular('epoch', epoch)
         for key, val in evaluator.logs('test'):
