@@ -120,7 +120,8 @@ def build_env(args):
     env_type, env_id = get_env_type(args.env)
     print("env_type", env_type)
     print("args.num_env: ", args.num_env)
-    if env_type in {'atari', 'retro', "env_tcn", "tcn"}:
+    if env_type in {'atari', 'retro'}:
+        assert alg not in {'her'}
         if alg == 'deepq':
             env = make_env(env_id, env_type, seed=seed, wrapper_kwargs={'frame_stack': True})
         elif alg == 'trpo_mpi':
