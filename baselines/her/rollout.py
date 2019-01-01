@@ -1,7 +1,7 @@
+import pickle
 from collections import deque
 
 import numpy as np
-import pickle
 
 from baselines.her.util import convert_episode_to_batch_major, store_args
 
@@ -33,7 +33,8 @@ class RolloutWorker:
 
         assert self.T > 0
 
-        self.info_keys = [key.replace('info_', '') for key in dims.keys() if key.startswith('info_')]
+        self.info_keys = [key.replace('info_', '')
+                          for key in dims.keys() if key.startswith('info_')]
 
         self.success_history = deque(maxlen=history_len)
         self.Q_history = deque(maxlen=history_len)
@@ -63,7 +64,8 @@ class RolloutWorker:
         # generate episodes
         obs, achieved_goals, acts, goals, successes = [], [], [], [], []
         dones = []
-        info_values = [np.empty((self.T - 1, self.rollout_batch_size, self.dims['info_' + key]), np.float32) for key in self.info_keys]
+        info_values = [np.empty((self.T - 1, self.rollout_batch_size,
+                                 self.dims['info_' + key]), np.float32) for key in self.info_keys]
         Qs = []
         for t in range(self.T):
             policy_output = self.policy.get_actions(
@@ -90,6 +92,7 @@ class RolloutWorker:
             obs_dict_new, _, done, info = self.venv.step(u)
             o_new = obs_dict_new['observation']
             ag_new = obs_dict_new['achieved_goal']
+            self.g = self.obs_dict['desired_goal']
             success = np.array([i.get('is_success', 0.0) for i in info])
 
             if any(done):
@@ -167,4 +170,3 @@ class RolloutWorker:
             return [(prefix + '/' + key, val) for key, val in logs]
         else:
             return logs
-
