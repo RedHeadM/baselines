@@ -48,7 +48,7 @@ def train(*, policy, rollout_worker, evaluator,
             policy.update_target_net()
 
         # test
-        os.environ['TCN_ENV_VID_LOG_FOLDER'] = 'val_vid'
+        os.environ['TCN_ENV_VID_LOG_FOLDER'] = 'val_vid/epoch_'+str(epoch)
         os.environ['TCN_ENV_VID_LOG_INTERVAL'] = '1'
 
         evaluator.clear_history()
