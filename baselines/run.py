@@ -16,21 +16,21 @@ from baselines.common.tf_util import get_session
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.vec_env.vec_normalize import VecNormalize
 from baselines.common.vec_env.vec_video_recorder import VecVideoRecorder
-from bulletrobotgym.env_tcn import TcnPush, TcnPushCheckpoint, TcnPushSubStats
+from bulletrobotgym.env_tcn import TcnPush, TcnPushCheckpoint, TcnPushSubGoal
 from gym.envs.registration import register
 
-register(
-    id='tcn-push-v0',
-    entry_point='bulletrobotgym.env_tcn:TcnPush',
-)
 # register(
-#     id='tcn-push-sub-states-v0',
-#     entry_point='bulletrobotgym.env_tcn:TcnPushSubStats',
+#     id='tcn-push-v0',
+#     entry_point='bulletrobotgym.env_tcn:TcnPush',
 # )
 register(
-    id='tcn-push-checkpoint-v0',
-    entry_point='bulletrobotgym.env_tcn:TcnPushCheckpoint',
+    id='tcn-push-sub-goal-v0',
+    entry_point='bulletrobotgym.env_tcn:TcnPushSubGoal',
 )
+# register(
+#     id='tcn-push-checkpoint-v0',
+#     entry_point='bulletrobotgym.env_tcn:TcnPushCheckpoint',
+# )
 # register(
 #     id='tcn-push-rnn-v0',
 #     entry_point='bulletrobotgym.env_tcn:TcnRnnPush',
